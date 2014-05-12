@@ -8,7 +8,7 @@
 #include <netdb.h> 
 #include <pthread.h>
 
-#define PORT 4000
+#define PORT 5690
 #define TRUE 1  //You know why...
 #define BUFFER_SIZE 256
 
@@ -24,9 +24,11 @@ void *reader(void)
     
     while(TRUE)
     {
-        read(sockfd,inputBuffer,BUFFER_SIZE);
+        if(read(sockfd,inputBuffer,BUFFER_SIZE) >0)
         {
-            printf("%s\n",inputBuffer );
+            printf("\nMessage from X > %s",inputBuffer);
+            printf( "Enter the message: ");  //TODO: Why this no Work? o.O
+            fflush(stdout);
         }
     }
 
@@ -61,7 +63,9 @@ int main(int argc, char *argv[])
     
 	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
         printf("ERROR connecting\n");
-
+    
+    else
+    {
     read(sockfd,inputBuffer,BUFFER_SIZE);
     printf("My ID is %s \n", inputBuffer);
     UUID = atoi(inputBuffer);
@@ -74,7 +78,7 @@ int main(int argc, char *argv[])
         fgets(outputBuffer,BUFFER_SIZE,stdin);
         write(sockfd,outputBuffer,BUFFER_SIZE);   
     }
-
+    }
 	close(sockfd);
     return 0;
 }
