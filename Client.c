@@ -84,10 +84,19 @@ int main(int argc, char *argv[])
     
     else
     {
-    read(sockfd,inputBuffer,BUFFER_SIZE);
-    printf("My ID is %s \n", inputBuffer);
-    UUID = atoi(inputBuffer);
-    pthread_create(&readerHandler,NULL,reader,NULL);
+        
+        if(read(sockfd,inputBuffer,BUFFER_SIZE) >0)
+        {
+            printf("My ID is %s \n", inputBuffer);
+            UUID = atoi(inputBuffer);
+
+            if(read(sockfd,inputBuffer,BUFFER_SIZE) >0)   //Welcome message
+            {
+                printf("%s \n",inputBuffer);
+
+                pthread_create(&readerHandler,NULL,reader,NULL);
+            }
+        }
 
     while(TRUE)
     {

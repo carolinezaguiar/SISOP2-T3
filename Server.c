@@ -53,11 +53,11 @@ void *socket_threads(void *UUID) //Handles the client itself :)
                 {
                     case 'n':
                         sscanf(buffer,"%*s %[^\t\n]",name);
-                        printf("Name change to %s\n",name );
+                        printf("Name changed to %s\n",name );
                         break;
                     case 'j':   //TODO: Complete this
                         
-                        sscanf(buffer,"%*s %d", new_room);
+                        sscanf(buffer,"%*s %d", &new_room);
                         printf("Room changed to %d\n",new_room);
                         break;
                     case 'l':   //TODO: Complete this
@@ -73,6 +73,7 @@ void *socket_threads(void *UUID) //Handles the client itself :)
                             }
                         }
                         socks[id] = -1;
+                        pthread_exit(0);
                         break;
                        
                     default:
@@ -95,6 +96,7 @@ int main(int argc, char *argv[])
 	socklen_t clilen;
 	char buffer[BUFFER_SIZE];
 	struct sockaddr_in serv_addr, cli_addr;
+    char welcome[255] = "Welcome, plese type /n <name> to change your name :)";
 	
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
         printf("ERROR opening socket\n");
@@ -130,8 +132,12 @@ int main(int argc, char *argv[])
         {
     	    printf("Client connected, yeah!\n");
 	        sprintf(UUIDCHAR,"%d",(int)UUID);
-	        write(socks[UUID],UUIDCHAR,sizeof(int));	
-    	    pthread_create(&clientHandler[UUID],NULL,socket_threads,(void *)UUID); //FIX ME :)
+            write(socks[UUID],UUIDCHAR,sizeof(UUIDCHAR));
+ 	        
+            
+            write(socks[UUID],welcome,sizeof(welcome));
+    	    
+            pthread_create(&clientHandler[UUID],NULL,socket_threads,(void *)UUID); //FIX ME :)
 	        UUID++;
         }
         
