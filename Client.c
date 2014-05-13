@@ -8,7 +8,7 @@
 #include <netdb.h> 
 #include <pthread.h>
 
-#define PORT 5690
+#define PORT 32000
 #define TRUE 1  //You know why...
 #define BUFFER_SIZE 256
 
@@ -17,18 +17,36 @@ char inputBuffer[BUFFER_SIZE];
 int UUID;
 int sockfd,n ;
 
+
 pthread_t readerHandler;
 
 void *reader(void)
 {
-    
+    char name[25], control[BUFFER_SIZE];
     while(TRUE)
     {
         if(read(sockfd,inputBuffer,BUFFER_SIZE) >0)
         {
-            printf("\nMessage from X > %s",inputBuffer);
-            printf( "Enter the message: ");  //TODO: Why this no Work? o.O
-            fflush(stdout);
+            if(inputBuffer[0] == 'U')
+            {
+              sscanf(inputBuffer,"U#%[^\t\n]",name);
+                if(read(sockfd,inputBuffer,BUFFER_SIZE) >0)
+                {
+                    printf("\n%s > %s",name,inputBuffer);
+                    printf( "Enter the message: ");
+                    fflush(stdout);
+                }
+            }
+            else
+            {
+                sscanf(inputBuffer,"S#%[^\t\n]",control);
+                printf("\nSERVER > %s\n",control);
+                printf( "Enter the message: ");
+                fflush(stdout);
+
+            }
+                
+
         }
     }
 
@@ -76,7 +94,12 @@ int main(int argc, char *argv[])
         printf("Enter the message: ");
         bzero(outputBuffer,BUFFER_SIZE);
         fgets(outputBuffer,BUFFER_SIZE,stdin);
-        write(sockfd,outputBuffer,BUFFER_SIZE);   
+        
+        if(strlen(outputBuffer) > 1) //No empty messages :)
+            write(sockfd,outputBuffer,BUFFER_SIZE);   
+
+        if(outputBuffer[0] == '/' && outputBuffer[1] == 'q')
+            break;
     }
     }
 	close(sockfd);

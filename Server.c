@@ -9,7 +9,7 @@
 
 #define TRUE 1 //Dam no TRUE on C...
 
-#define PORT 5690
+#define PORT 32000
 #define MAX_CLIENTS 100
 #define BUFFER_SIZE 256
 
@@ -20,25 +20,69 @@ pthread_t clientHandler[MAX_CLIENTS];					//Or lovely handler
 void *socket_threads(void *UUID) //Handles the client itself :)
 {
    
-	char buffer[BUFFER_SIZE];
+	char buffer[BUFFER_SIZE], control[BUFFER_SIZE];
 	int id = (int)UUID;
     int i;
+    char name[25] = "unamed";
 	while(TRUE)
 	{
-	if( read(socks[id],buffer,BUFFER_SIZE) >0 )
-	{	
-	    buffer[BUFFER_SIZE-1] = '\0';
-		printf("Message from %d: %s", id, buffer);	
-        for(i = 0; i<MAX_CLIENTS; i++)
-        {
-            if(i != id && socks[i] != -1)
+    	if( read(socks[id],buffer,BUFFER_SIZE) >0 )
+	    {	
+            buffer[BUFFER_SIZE-1] = '\0';
+
+            if(buffer[0] != '/')    //Pure text message
             {
-                write(socks[i],buffer,BUFFER_SIZE);
+
+		        printf("Message from %d: %s", id, buffer);	
+                sprintf(control,"U#%s",name); //User message# User Name
+
+                for(i = 0; i<MAX_CLIENTS; i++)
+                {
+                    if(i != id && socks[i] != -1)
+                    {
+                        write(socks[i],control,BUFFER_SIZE);
+                        write(socks[i],buffer,BUFFER_SIZE);
+                    }
+                }
             }
-        }
+            else //Control Message
+            {
+                printf("Control Message\n");
+                int new_room;
+                switch( buffer[1])
+                {
+                    case 'n':
+                        sscanf(buffer,"%*s %[^\t\n]",name);
+                        printf("Name change to %s\n",name );
+                        break;
+                    case 'j':   //TODO: Complete this
+                        
+                        sscanf(buffer,"%*s %d", new_room);
+                        printf("Room changed to %d\n",new_room);
+                        break;
+                    case 'l':   //TODO: Complete this
+                        printf("Left to looby\n" );
+                        break;
+                    case 'q':
+                        for(i = 0; i<MAX_CLIENTS; i++)
+                        {
+                            if(i != id && socks[i] != -1)
+                            {
+                                sprintf(control,"S#%s rage quited!",name);
+                                write(socks[i],control,BUFFER_SIZE);
+                            }
+                        }
+                        socks[id] = -1;
+                        break;
+                       
+                    default:
+                        printf("Not recognized\n" );
+                        break;
 
+                }
+            }
 
-	}
+	    }
 	}
 	
 
@@ -84,11 +128,11 @@ int main(int argc, char *argv[])
         
         else
         {
-	    printf("Client connected, yeah!\n");
-	    sprintf(UUIDCHAR,"%d",(int)UUID);
-	    write(socks[UUID],UUIDCHAR,sizeof(int));	
-	    pthread_create(&clientHandler[UUID],NULL,socket_threads,(void *)UUID); //FIX ME :)
-	    UUID++;
+    	    printf("Client connected, yeah!\n");
+	        sprintf(UUIDCHAR,"%d",(int)UUID);
+	        write(socks[UUID],UUIDCHAR,sizeof(int));	
+    	    pthread_create(&clientHandler[UUID],NULL,socket_threads,(void *)UUID); //FIX ME :)
+	        UUID++;
         }
         
 		
