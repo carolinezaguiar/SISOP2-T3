@@ -176,7 +176,28 @@ int main(int argc, char *argv[])
         if(strlen(outputBuffer) > 1) //No empty messages :)
 		{
 			outputBuffer[strlen(outputBuffer)]='\n';
-            write(sockfd,outputBuffer,BUFFER_SIZE);   
+            write(sockfd,outputBuffer,BUFFER_SIZE);
+            //TODO: MUTEX HERE
+        	if(lineIndex < LINES-7)
+			{
+				wattron(wOutput,COLOR_PAIR(1));
+				mvwprintw(wOutput,lineIndex+1,1,"Me > %s",outputBuffer);
+				wattroff(wOutput,COLOR_PAIR(1));
+				lineIndex++;
+			}
+			else //Time to scroll :)
+			{
+				wattron(wOutput,COLOR_PAIR(1));
+        		mvwprintw(wOutput,LINES-7,1,"Me > %s",outputBuffer);
+				wattroff(wOutput,COLOR_PAIR(1));
+				wclrtoeol(wOutput);
+				scroll(wOutput);
+				box(wOutput, 0 , 0);
+			}
+            wrefresh(wOutput);
+            //END MUTEX HERE
+
+
 		}
 
         if(outputBuffer[0] == '/' && outputBuffer[1] == 'q')
