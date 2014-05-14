@@ -70,7 +70,7 @@ void *reader(void)
 				else //Time to scroll :)
 				{
 					wattron(wOutput,COLOR_PAIR(2));
-					mvwprintw(wOutput,LINES-6,1,"%s > %s",control);
+					mvwprintw(wOutput,LINES-7,1,"SERVER > %s",control);
 					wattroff(wOutput,COLOR_PAIR(2));
 					wclrtoeol(wOutput);
 					scroll(wOutput);
