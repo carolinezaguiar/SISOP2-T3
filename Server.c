@@ -1,3 +1,6 @@
+// UFRGS - INF01151 Sistemas Operacionais II - 2014/1
+// Caroline de Aguiar and Juliano Franz
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,123 +9,129 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include "Server.h"
 
-#define TRUE 1 //Dam no TRUE on C...
+// Client list and its sockets
+int connectedClients[MAX_CLIENTS];
+int socks[MAX_CLIENTS];
+int rooms[MAX_ROOMS][MAX_CLIENTS];
 
-#define PORT 32000
-#define MAX_CLIENTS 100
-#define BUFFER_SIZE 256
-#define MAX_ROOMS 4
-
-
-int connectedClients[MAX_CLIENTS], socks[MAX_CLIENTS], rooms[MAX_ROOMS][MAX_CLIENTS];	//Define the client list and its sockets
-pthread_t clientHandler[MAX_CLIENTS];					//Or lovely handler
+pthread_t clientHandler[MAX_CLIENTS];
 pthread_mutex_t mutexLock = PTHREAD_MUTEX_INITIALIZER;
 
 
-void *socket_threads(void *UUID) //Handles the client itself :)
+// Concurrent server: Handles each client separated
+void *socket_threads(void *UUID)
 {
-   
-	char buffer[BUFFER_SIZE], control[BUFFER_SIZE];
-	int id = (int)UUID;
-    int i;
-	int my_room = 0;	//lobby
+   char buffer[BUFFER_SIZE];
+   char control[BUFFER_SIZE];
+   int id = *(int*) UUID;
+	int i;
+	int my_room = 0;
+   int new_room;
 	rooms[my_room][id] = 1;
-    char name[25] = "unamed";
+   char userName[25] = "unamed";
 	
-	while(TRUE)
+	while (TRUE)
 	{
-    	if( read(socks[id],buffer,BUFFER_SIZE) >0 )
-	    {	
-            buffer[BUFFER_SIZE-1] = '\0';
+		if (read(socks[id],buffer,BUFFER_SIZE) > 0)
+	    	{		
+				buffer[BUFFER_SIZE-1] = '\0';
 
-            if(buffer[0] != '/')    //Pure text message
+				if(buffer[0] != '/')    //Pure text message
             {
-				if(strcmp(name,"unamed") == 0) //Ensures that the client is IDed
-				{
-					sprintf(control,"S#Please change your name first with /n");
-					write(socks[id],control,BUFFER_SIZE);
-				}
-				else
-				{
-					printf("Message from %d: %s", id, buffer);	
-					sprintf(control,"U#%s",name); //User message# User Name
-					
-					for(i = 0; i<MAX_CLIENTS; i++)
+					if(strcmp(userName,"unamed") == 0) // Check if client has ID
 					{
-						if(i != id && socks[i] != -1 && rooms[my_room][i] ==1 )
+						sprintf(control,"S#Please change your name first with /n");
+						write(socks[id],control,BUFFER_SIZE);
+					}
+					else
+					{ 
+						if(my_room == 0) // Check if client has a room
 						{
-							write(socks[i],control,BUFFER_SIZE);
-							write(socks[i],buffer,BUFFER_SIZE);
-							
+							sprintf(control,"S#Please choose a room first /n");
+							write(socks[id],control,BUFFER_SIZE);
+						}
+						else
+						{
+							printf("Message from %d: %s", id, buffer);	
+							sprintf(control,"U#%s",userName); //User message# User Name
+					
+							// Replicate message to all clients of the same room
+							for(i = 0; i<MAX_CLIENTS; i++)
+							{
+								if(i != id && socks[i] != -1 && rooms[my_room][i] == 1 )
+								{
+									write(socks[i],control,BUFFER_SIZE);
+									write(socks[i],buffer,BUFFER_SIZE);
+								}
+							}
 						}
 					}
-				}
             }
-            else //Control Message
+            else
             {
                 printf("Control Message\n");
-                int new_room;
                 switch( buffer[1])
                 {
-                    case 'n':
-                        sscanf(buffer,"%*s %[^\t\n]",name);
-                        printf("Name changed to %s\n",name );
+                    case 'n': // Change name
+                        sscanf(buffer,"%*s %[^\t\n]",userName);
+                        printf("Name changed to %s\n",userName);
                         break;
-                    case 'j': 
-                        
-						pthread_mutex_lock(&mutexLock);
-						rooms[my_room][id] = -1;
+
+                    case 'j': // Join a room
+								pthread_mutex_lock(&mutexLock);
+								rooms[my_room][id] = -1;
                         sscanf(buffer,"%*s %d", &my_room);
                         printf("Room changed to %d\n",my_room);
-						rooms[my_room][id] = 1;					
-						sprintf(control,"S#Welcome to room #%d",my_room);
-						write(socks[id],control,BUFFER_SIZE);						
-						pthread_mutex_unlock(&mutexLock);
+								rooms[my_room][id] = 1;					
+								sprintf(control,"S#Welcome to room #%d",my_room);
+								write(socks[id],control,BUFFER_SIZE);						
+								pthread_mutex_unlock(&mutexLock);
                         break;
 						
-                    case 'l': 
-						pthread_mutex_lock(&mutexLock);
+                    case 'l': // Leave a room
+								pthread_mutex_lock(&mutexLock);
                         printf("Left to looby\n" );
-						rooms[my_room][id] = -1;
-						my_room = 0;
-						rooms[my_room][id] = 1;
-						sprintf(control,"S#You are back in the lobby");
-						write(socks[id],control,BUFFER_SIZE);
-						pthread_mutex_unlock(&mutexLock);
+								rooms[my_room][id] = -1;
+								my_room = 0;
+								rooms[my_room][id] = 1;
+								sprintf(control,"S#You are back in the lobby");
+								write(socks[id],control,BUFFER_SIZE);
+								pthread_mutex_unlock(&mutexLock);
                         break;
-                    case 'q':
+
+                    case 'q': // Quit the chat
                         for(i = 0; i<MAX_CLIENTS; i++)
                         {
                             if(i != id && socks[i] != -1)
                             {
-                                sprintf(control,"S#%s rage quited!",name);
+                                sprintf(control,"S#%s rage quited!",userName);
                                 write(socks[i],control,BUFFER_SIZE);
                             }
                         }
-						pthread_mutex_lock(&mutexLock);	//Ensures that no one else is reading/writing
+								pthread_mutex_lock(&mutexLock);	//Ensures that no one else is reading/writing
                         socks[id] = -1;
-						rooms[my_room][id] = -1;
-						pthread_mutex_unlock(&mutexLock);
+								rooms[my_room][id] = -1;
+								pthread_mutex_unlock(&mutexLock);
                         pthread_exit((void*) 0);
                         break;
+
                     case 'h':
-						sprintf(control,"S#Commands: /n <name> /j <room_number> /l back to lobby /q quit");
-						write(socks[id],control,BUFFER_SIZE);
-						break;
+								sprintf(control,"S#Commands: /n <name> /j <room_number> /l back to lobby /q quit");
+								write(socks[id],control,BUFFER_SIZE);
+								break;
+
                     default:
                         printf("Not recognized\n" );
-						sprintf(control,"S#Command not recognized, type /h for help");
-						write(socks[id],control,BUFFER_SIZE);
+								sprintf(control,"S#Command not recognized, type /h for help");
+								write(socks[id],control,BUFFER_SIZE);
                         break;
 
-                }
-            }
-
-	    }
+                	}
+            	}
+		}
 	}
-	
-
 }
 
 
@@ -131,61 +140,70 @@ int main(int argc, char *argv[])
 	int sockfd;
 	socklen_t clilen;
 	char buffer[BUFFER_SIZE];
-	struct sockaddr_in serv_addr, cli_addr;
-    char welcome[255] = "Welcome, please type /n <name> to change your name or /h for help!";
+	struct sockaddr_in serv_addr, cli_addr; // Initially, only two sockets
+   char welcome[255] = "Welcome, please type /n <name> to change your name or /h for help!";
 	
-	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+	// TCP: CREATE SOCKET
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+	{
         printf("ERROR opening socket\n");
-	
+	}
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(PORT);
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	bzero(&(serv_addr.sin_zero), 8);     
     
-	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+	// TCP: BIND
+	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+	{
 		printf("ERROR on binding\n");
+	}
+
 	int UUID = 0;
-	char UUIDCHAR[BUFFER_SIZE];	
+	char UUIDCHAR[BUFFER_SIZE];
+   int i,j;
 
-    int i,j;
+	// Initialize rooms
 	for(i =0; i<MAX_ROOMS;i++)
+	{
 		for(j=0;j<MAX_CLIENTS;j++)
+		{
 			rooms[i][j] = -1;
-	
-    for (i = 0; i<MAX_CLIENTS;i++)
-    {
-        socks[i] = -1;
-    }
+		}
+	}
+	// Initialize clients
+   for (i = 0; i<MAX_CLIENTS;i++)
+   {
+   	socks[i] = -1;
+   }
 
-    printf("SV OK\n" );
+   printf("SV OK\n" );
 
-    listen(sockfd,5);
+	// TCP: LISTEN
+   listen(sockfd,MAX_PENDING_CONNECTIONS);
 
 	while(TRUE)
 	{
-		
+		// TCP: ACCEPT
 		if((socks[UUID] = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen)) == -1)
-	            printf("ERROR on accept\n");
+		{
+	            printf("ERROR on accept new client\n");
 	            //TODO: Decrement i if not accepted
-        
-        else
-        {
-    	    printf("Client connected, yeah!\n");
-	        sprintf(UUIDCHAR,"%d",(int)UUID);
-            write(socks[UUID],UUIDCHAR,sizeof(UUIDCHAR));
- 	        
-            
-            write(socks[UUID],welcome,sizeof(welcome));
-    	    
-            pthread_create(&clientHandler[UUID],NULL,socket_threads,(void *)UUID); //FIX ME :)
-	        UUID++;
-        }
-        
-		
+		}
+      else
+      {
+			printf("Client connected!\n");
+			sprintf(UUIDCHAR,"%d",(int)UUID);
+			write(socks[UUID],UUIDCHAR,sizeof(UUIDCHAR));            
+         write(socks[UUID],welcome,sizeof(welcome));
+			// Concurrent server: Create one thread for each client
+			pthread_create(&clientHandler[UUID],NULL,socket_threads,&UUID);
+	      UUID++;
+		}
 	}
 	
+	// TCP: CLOSE SOCKET
 	close(sockfd);
 
-
 	return 0; 
-	}
+}

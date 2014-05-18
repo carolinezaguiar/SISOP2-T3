@@ -1,3 +1,6 @@
+// UFRGS - INF01151 Sistemas Operacionais II - 2014/1
+// Caroline de Aguiar and Juliano Franz
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -9,7 +12,7 @@
 #include <pthread.h>
 
 #define PORT 32000
-#define TRUE 1  //You know why...
+#define TRUE 1
 #define BUFFER_SIZE 256
 
 
@@ -20,7 +23,7 @@ int sockfd,n ;
 
 pthread_t readerHandler;
 
-void *reader(void)
+void *reader(void *arg)
 {
     char name[25], control[BUFFER_SIZE];
     while(TRUE)
