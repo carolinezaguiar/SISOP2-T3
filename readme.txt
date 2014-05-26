@@ -1,4 +1,4 @@
-// UFRGS - INF01151 Sistemas Operacionais II - 2014/1
+// UFRGS - INF01151 Sistemas Operacionais II - Trabalho III - 2014/1
 // Caroline de Aguiar and Juliano Franz
 
 COMPILATION
@@ -14,4 +14,4 @@ COMMANDS CLIENT
 2 - Enter in a chat room: 	/j <room_number> 
 3 - Get back to the lobby: /l
 4 - Leave the chat: 			/q
-5 - To write a mesage: just type it
+5 - To write a message: just type it

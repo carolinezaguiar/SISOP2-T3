@@ -1,4 +1,4 @@
-// UFRGS - INF01151 Sistemas Operacionais II - 2014/1
+// UFRGS - INF01151 Sistemas Operacionais II - Trabalho III - 2014/1
 // Caroline de Aguiar and Juliano Franz
 
 #include <stdio.h>
@@ -38,6 +38,8 @@ void *reader(void *arg)
 		// TCP: READ new message from server
 		if(read(sockfd,inputBuffer,BUFFER_SIZE) > 0)
 		{
+			pthread_mutex_lock(&mutexLock);
+
 			if(inputBuffer[0] == 'U') // Message from another client of the same room
 			{
 				sscanf(inputBuffer,"U#%[^\t\n]",name);
@@ -54,6 +56,8 @@ void *reader(void *arg)
 				else write_output_scroll(MSG_H2LS,COLOR2,control,NULL);
 			}                
 			wrefresh(wOutput);
+
+			pthread_mutex_unlock(&mutexLock);
 		}
 	}
 }
@@ -63,6 +67,9 @@ int main(int argc, char *argv[])
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
    char outputBuffer[BUFFER_SIZE];
+	char outputBufferErr[BUFFER_SIZE];
+	strcpy(outputBufferErr, "ERROR: Message is too big");
+	outputBufferErr[strlen(outputBufferErr)]='\n';
 
    if (argc < 2)
 	{
@@ -126,15 +133,24 @@ int main(int argc, char *argv[])
 		{
 			outputBuffer[strlen(outputBuffer)]='\n';
 			// TCP: WRITE message
-			write(sockfd,outputBuffer,BUFFER_SIZE);
-         
-			pthread_mutex_lock(&mutexLock);
+			if (strlen(outputBuffer) > 55) 
+			{
+		     	if (lineIndex < LINES-7) write_output(MSG_L2H,COLOR1,outputBufferErr,NULL);
+				else write_output_scroll(MSG_L2H,COLOR1,outputBufferErr,NULL);
+		      wrefresh(wOutput);
+			}	
+			else
+			{
+				write(sockfd,outputBuffer,BUFFER_SIZE);
+		      
+				pthread_mutex_lock(&mutexLock);
 
-        	if (lineIndex < LINES-7) write_output(MSG_L2H,COLOR1,outputBuffer,NULL);
-			else write_output_scroll(MSG_L2H,COLOR1,outputBuffer,NULL);
-         wrefresh(wOutput);
+		     	if (lineIndex < LINES-7) write_output(MSG_L2H,COLOR1,outputBuffer,NULL);
+				else write_output_scroll(MSG_L2H,COLOR1,outputBuffer,NULL);
+		      wrefresh(wOutput);
 
-         pthread_mutex_unlock(&mutexLock);
+		      pthread_mutex_unlock(&mutexLock);
+			}
 
 		}
 

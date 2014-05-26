@@ -1,4 +1,4 @@
-// UFRGS - INF01151 Sistemas Operacionais II - 2014/1
+// UFRGS - INF01151 Sistemas Operacionais II - Trabalho III - 2014/1
 // Caroline de Aguiar and Juliano Franz
 
 #include <stdio.h>

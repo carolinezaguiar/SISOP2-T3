@@ -12,7 +12,6 @@
 #include "Server.h"
 
 // Client list and its sockets
-int connectedClients[MAX_CLIENTS];
 int socks[MAX_CLIENTS];
 int rooms[MAX_ROOMS][MAX_CLIENTS];
 
@@ -47,24 +46,16 @@ void *socket_threads(void *UUID)
 					}
 					else
 					{ 
-						if(my_room == LOBBY) // Check if client has a room
-						{
-							sprintf(control,"S#Please choose a room first /n");
-							write(socks[id],control,BUFFER_SIZE);
-						}
-						else
-						{
-							printf("Message from %d: %s", id, buffer);	
-							sprintf(control,"U#%s",userName); //User message# User Name
+						printf("Message from %d: %s", id, buffer);	
+						sprintf(control,"U#%s",userName); //User message# User Name
 					
-							// Replicate message to all clients of the same room
-							for(i = 0; i<MAX_CLIENTS; i++)
+						// Replicate message to all clients of the same room
+						for(i = 0; i<MAX_CLIENTS; i++)
+						{
+							if(i != id && socks[i] != -1 && rooms[my_room][i] == 1 )
 							{
-								if(i != id && socks[i] != -1 && rooms[my_room][i] == 1 )
-								{
-									write(socks[i],control,BUFFER_SIZE);
-									write(socks[i],buffer,BUFFER_SIZE);
-								}
+								write(socks[i],control,BUFFER_SIZE);
+								write(socks[i],buffer,BUFFER_SIZE);
 							}
 						}
 					}
@@ -81,20 +72,22 @@ void *socket_threads(void *UUID)
 
                     case 'j': // Join a room
 								sscanf(buffer,"%*s %d", &new_room);
-								if ((new_room > MAX_ROOMS) || (new_room == my_room))
+								if ((new_room >= MAX_ROOMS) || (new_room == my_room))
 								{
 									sprintf(control,"S#Invalid room number#%d",new_room);
 									write(socks[id],control,BUFFER_SIZE);
-									break;
 								}
-								pthread_mutex_lock(&mutexLock);
-								rooms[my_room][id] = -1;
-								my_room = new_room;
-                        printf("Room changed to %d\n",my_room);
-								rooms[my_room][id] = 1;					
-								sprintf(control,"S#Welcome to room #%d",my_room);
-								write(socks[id],control,BUFFER_SIZE);						
-								pthread_mutex_unlock(&mutexLock);
+								else
+								{
+									pthread_mutex_lock(&mutexLock);
+									rooms[my_room][id] = -1;
+									my_room = new_room;
+		                     printf("Room changed to %d\n",my_room);
+									rooms[my_room][id] = 1;					
+									sprintf(control,"S#Welcome to room #%d",my_room);
+									write(socks[id],control,BUFFER_SIZE);						
+									pthread_mutex_unlock(&mutexLock);
+								}
                         break;
 						
                     case 'l': // Leave a room
@@ -102,16 +95,18 @@ void *socket_threads(void *UUID)
 								{
 									sprintf(control,"S#Already in the lobby");
 									write(socks[id],control,BUFFER_SIZE);
-									break;
 								}
-								pthread_mutex_lock(&mutexLock);
-                        printf("Left to looby\n" );
-								rooms[my_room][id] = -1;
-								my_room = 0;
-								rooms[my_room][id] = 1;
-								sprintf(control,"S#You are back in the lobby");
-								write(socks[id],control,BUFFER_SIZE);
-								pthread_mutex_unlock(&mutexLock);
+								else 
+								{
+									pthread_mutex_lock(&mutexLock);
+		                     printf("Left to looby\n" );
+									rooms[my_room][id] = -1;
+									my_room = 0;
+									rooms[my_room][id] = 1;
+									sprintf(control,"S#You are back in the lobby");
+									write(socks[id],control,BUFFER_SIZE);
+									pthread_mutex_unlock(&mutexLock);
+								}
                         break;
 
                     case 'q': // Quit the chat
@@ -201,7 +196,6 @@ int main(int argc, char *argv[])
 		if((socks[UUID] = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen)) == -1)
 		{
 	            printf("ERROR on accept new client\n");
-	            //TODO: Decrement i if not accepted
 		}
       else
       {
