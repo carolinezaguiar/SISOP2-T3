@@ -24,7 +24,7 @@ void *socket_threads(void *UUID)
 {
    char buffer[BUFFER_SIZE];
    char control[BUFFER_SIZE];
-   int id = *(int*) UUID;
+   int id = (int) UUID;
 	int i;
 	int my_room = LOBBY;
    int new_room;
@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
 			write(socks[UUID],UUIDCHAR,sizeof(UUIDCHAR));            
          write(socks[UUID],welcome,sizeof(welcome));
 			// Concurrent server: Create one thread for each client
-			pthread_create(&clientHandler[UUID],NULL,socket_threads,&UUID);
+			pthread_create(&clientHandler[UUID],NULL,socket_threads,(void*)UUID);
 	      UUID++;
 		}
 	}
