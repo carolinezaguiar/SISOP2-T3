@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 					scroll(wOutput);
 					box(wOutput, 0 , 0);
 				}
-                wrefresh(wOutput);
+            wrefresh(wOutput);
 			}	
 			else
 			{
@@ -241,12 +241,6 @@ int main(int argc, char *argv[])
 	close(sockfd);
    
 	return 0;
-}
-
-void create_windows(void)
-{
-
-
 }
 
 WINDOW *create_newwin(int height, int width, int starty, int startx)
