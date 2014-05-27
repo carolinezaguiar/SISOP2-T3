@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
    char outputBuffer[BUFFER_SIZE];
 	char outputBufferErr[BUFFER_SIZE];
 	strcpy(outputBufferErr, "ERROR: Message is too big");
-	outputBufferErr[strlen(outputBufferErr)]='\n';
+	//outputBufferErr[strlen(outputBufferErr)]='\n';
 
    if (argc < 2)
 	{
@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
 		{
 			outputBuffer[strlen(outputBuffer)]='\n';
 			// TCP: WRITE message
-			if (strlen(outputBuffer) > 55) 
+			if (strlen(outputBuffer) > COLS-strlen(msg)-4) 
 			{
 				if(lineIndex < LINES-7)
 				{
@@ -201,6 +201,7 @@ int main(int argc, char *argv[])
 					scroll(wOutput);
 					box(wOutput, 0 , 0);
 				}
+                wrefresh(wOutput);
 			}	
 			else
 			{
