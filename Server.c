@@ -72,7 +72,7 @@ void *socket_threads(void *UUID)
 
                     case 'j': // Join a room
 								sscanf(buffer,"%*s %d", &new_room);
-								if ((new_room >= MAX_ROOMS) || (new_room == my_room))
+								if ((new_room <= LOBBY ) || (new_room >= MAX_ROOMS) || (new_room == my_room))
 								{
 									sprintf(control,"S#Invalid room number#%d",new_room);
 									write(socks[id],control,BUFFER_SIZE);
